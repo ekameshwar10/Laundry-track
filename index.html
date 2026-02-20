@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>LaundryTrack</title>
+
+  <!-- PWA Meta Tags -->
+  <meta name="application-name" content="LaundryTrack" />
+  <meta name="description" content="Laundry Collection & Delivery Management System" />
+  <meta name="theme-color" content="#1a2744" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="LaundryTrack" />
+  <meta name="msapplication-TileColor" content="#1a2744" />
+  <meta name="msapplication-tap-highlight" content="no" />
+
+  <!-- PWA Manifest (inline via JS) -->
+  <link rel="manifest" href="manifest.json" />
+
+  <!-- Apple Touch Icons (inline SVG as data URI) -->
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%231a2744'/%3E%3Ctext x='256' y='330' font-size='280' text-anchor='middle'%3E🧺%3C/text%3E%3C/svg%3E" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; -webkit-text-size-adjust: 100%; }
+    body {
+      font-family: 'Sora', sans-serif;
+      height: 100%;
+      background: #eef2fa;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
+    }
+    #root { height: 100%; }
+
+    /* Safe area insets for notch/home bar */
+    .safe-top    { padding-top:    env(safe-area-inset-top); }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+
+    /* PWA Install Banner */
+    #install-banner {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+      background: linear-gradient(135deg, #1a2744, #2563eb);
+      color: #fff; padding: 16px 20px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 -4px 30px rgba(0,0,0,0.3);
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    #install-banner.show { transform: translateY(0); }
+    #install-banner .icon { font-size: 32px; flex-shrink: 0; }
+    #install-banner .text { flex: 1; }
+    #install-banner .text strong { display: block; font-size: 14px; font-weight: 800; }
+    #install-banner .text span { font-size: 12px; opacity: 0.8; }
+    #install-banner button {
+      background: #fff; color: #1a2744; border: none; border-radius: 8px;
+      padding: 9px 18px; font-size: 13px; font-weight: 800;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+      flex-shrink: 0;
+    }
+    #install-banner .dismiss {
+      background: transparent; color: rgba(255,255,255,0.6);
+      padding: 6px; font-size: 20px; line-height: 1; min-width: 0;
+    }
+
+    /* iOS Install Instructions */
+    #ios-instructions {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+      background: #fff; border-radius: 20px 20px 0 0;
+      padding: 24px 24px calc(24px + env(safe-area-inset-bottom));
+      box-shadow: 0 -8px 40px rgba(0,0,0,0.2);
+      transform: translateY(100%);
+      transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    #ios-instructions.show { transform: translateY(0); }
+    #ios-instructions h3 { font-size: 17px; font-weight: 800; color: #1a2744; margin-bottom: 16px; }
+    #ios-instructions .step { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+    #ios-instructions .step .num {
+      width: 28px; height: 28px; border-radius: 50%; background: #1a2744;
+      color: #fff; font-size: 13px; font-weight: 800; display: flex;
+      align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    #ios-instructions .step p { font-size: 14px; color: #374151; line-height: 1.5; padding-top: 4px; }
+    #ios-instructions .step p strong { color: #1a2744; }
+    #ios-instructions .close-btn {
+      width: 100%; padding: 14px; background: #1a2744; color: #fff;
+      border: none; border-radius: 12px; font-size: 15px; font-weight: 800;
+      cursor: pointer; font-family: inherit; margin-top: 8px;
+    }
+    #ios-instructions .share-icon { color: #007aff; font-size: 18px; vertical-align: middle; }
+
+    /* Offline indicator */
+    #offline-bar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 10000;
+      background: #dc2626; color: #fff; text-align: center;
+      padding: 8px; font-size: 13px; font-weight: 700;
+      transform: translateY(-100%); transition: transform 0.3s ease;
+    }
+    #offline-bar.show { transform: translateY(0); }
+
+    /* Mobile bottom nav */
+    @media (max-width: 640px) {
+      .mobile-bottom-nav {
+        position: fixed !important; bottom: 0; left: 0; right: 0;
+        background: #fff;
+        padding-bottom: env(safe-area-inset-bottom);
+        box-shadow: 0 -2px 20px rgba(26,39,68,0.12);
+        z-index: 200;
+        display: flex !important;
+      }
+      .mobile-bottom-nav button {
+        flex: 1; padding: 10px 4px 8px; border: none; background: transparent;
+        font-family: inherit; font-size: 10px; font-weight: 700;
+        color: #9ca3af; cursor: pointer; display: flex; flex-direction: column;
+        align-items: center; gap: 3px; transition: color 0.2s;
+      }
+      .mobile-bottom-nav button.active { color: #2563eb; }
+      .mobile-bottom-nav button .nav-icon { font-size: 20px; }
+      .desktop-nav { display: none !important; }
+      .page-content { padding-bottom: calc(70px + env(safe-area-inset-bottom)) !important; }
+    }
+    @media (min-width: 641px) {
+      .mobile-bottom-nav { display: none !important; }
+    }
+
+    /* Splash/Loading */
+    #splash {
+      position: fixed; inset: 0; z-index: 99999;
+      background: linear-gradient(135deg, #0f172a 0%, #1a2744 55%, #1e3a8a 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.5s ease;
+    }
+    #splash.hide { opacity: 0; pointer-events: none; }
+    #splash .splash-icon { font-size: 72px; animation: splashBounce 0.6s ease; }
+    #splash h1 { color: #fff; font-size: 28px; font-weight: 900; margin-top: 16px; letter-spacing: -0.02em; }
+    #splash p { color: rgba(255,255,255,0.6); font-size: 14px; margin-top: 6px; }
+    #splash .loader { margin-top: 40px; display: flex; gap: 8px; }
+    #splash .loader span {
+      width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.4);
+      animation: loaderDot 1.2s ease infinite;
+    }
+    #splash .loader span:nth-child(2) { animation-delay: 0.2s; }
+    #splash .loader span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes splashBounce { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes loaderDot { 0%,80%,100% { background: rgba(255,255,255,0.2); transform: scale(0.8); } 40% { background: #fff; transform: scale(1.2); } }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes float { from { transform:translateY(0) rotate(0deg); } to { transform:translateY(-18px) rotate(4deg); } }
+
+    /* General mobile improvements */
+    select, input, textarea, button { font-family: 'Sora', sans-serif; }
+    input, select, textarea { font-size: 16px !important; } /* prevent iOS zoom */
+    button { -webkit-appearance: none; }
+    .touch-target { min-height: 44px; min-width: 44px; }
+
+    /* Scrolling */
+    .scroll-container { -webkit-overflow-scrolling: touch; }
+
+    /* Backdrop overlay */
+    #overlay {
+      display: none; position: fixed; inset: 0; z-index: 9998;
+      background: rgba(0,0,0,0.5);
+    }
+    #overlay.show { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- Splash Screen -->
+<div id="splash">
+  <div class="splash-icon">🧺</div>
+  <h1>LaundryTrack</h1>
+  <p>Collection & Delivery Management</p>
+  <div class="loader">
+    <span></span><span></span><span></span>
+  </div>
+</div>
+
+<!-- Offline Bar -->
+<div id="offline-bar">📡 You are offline — data is saved locally</div>
+
+<!-- Overlay (for iOS instructions) -->
+<div id="overlay"></div>
+
+<!-- iOS Install Instructions -->
+<div id="ios-instructions">
+  <h3>🧺 Install LaundryTrack</h3>
+  <div class="step">
+    <div class="num">1</div>
+    <p>Tap the <strong>Share</strong> button <span class="share-icon">⬆</span> at the bottom of Safari</p>
+  </div>
+  <div class="step">
+    <div class="num">2</div>
+    <p>Scroll down and tap <strong>"Add to Home Screen"</strong></p>
+  </div>
+  <div class="step">
+    <div class="num">3</div>
+    <p>Tap <strong>"Add"</strong> in the top right — the app icon will appear on your home screen!</p>
+  </div>
+  <button class="close-btn" onclick="closeIOSInstructions()">Got it!</button>
+</div>
+
+<!-- Install Banner (Android / Desktop) -->
+<div id="install-banner">
+  <div class="icon">🧺</div>
+  <div class="text">
+    <strong>Install LaundryTrack</strong>
+    <span>Add to home screen for the best experience</span>
+  </div>
+  <button onclick="installApp()">Install</button>
+  <button class="dismiss" onclick="dismissBanner()">✕</button>
+</div>
+
+<!-- React Root -->
+<div id="root"></div>
+
+<!-- Scripts: React + Recharts via CDN -->
+<script crossorigin src="https://unpkg.com/react@18.2.0/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+<script src="https://unpkg.com/recharts@2.8.0/umd/Recharts.js"></script>
+
+<script>
+// ─── PWA: Service Worker Registration ─────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const swCode = `
+const CACHE = 'laundrytrack-v1';
+const ASSETS = ['/'];
+self.addEventListener('install', e => {
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  self.skipWaiting();
+});
+self.addEventListener('activate', e => {
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
+  self.clients.claim();
+});
+self.addEventListener('fetch', e => {
+  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+});`;
+    const blob = new Blob([swCode], { type: 'application/javascript' });
+    const swUrl = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(swUrl).catch(() => {});
+  });
+}
+
+// ─── PWA: Install Prompt ───────────────────────────────────────────────────────
+let deferredPrompt = null;
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+const isInStandaloneMode = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (!isInStandaloneMode && !localStorage.getItem('installDismissed')) {
+    setTimeout(() => document.getElementById('install-banner').classList.add('show'), 3000);
+  }
+});
+
+function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; dismissBanner(); });
+  }
+}
+function dismissBanner() {
+  document.getElementById('install-banner').classList.remove('show');
+  localStorage.setItem('installDismissed', '1');
+}
+
+// iOS: show instructions after 4 seconds if not installed
+if (isIOS && !isInStandaloneMode && !localStorage.getItem('iosInstructionsDismissed')) {
+  setTimeout(() => {
+    document.getElementById('ios-instructions').classList.add('show');
+    document.getElementById('overlay').classList.add('show');
+  }, 4000);
+}
+function closeIOSInstructions() {
+  document.getElementById('ios-instructions').classList.remove('show');
+  document.getElementById('overlay').classList.remove('show');
+  localStorage.setItem('iosInstructionsDismissed', '1');
+}
+document.getElementById('overlay').addEventListener('click', closeIOSInstructions);
+
+// ─── Offline Detection ─────────────────────────────────────────────────────────
+function updateOnlineStatus() {
+  const bar = document.getElementById('offline-bar');
+  if (!navigator.onLine) bar.classList.add('show');
+  else bar.classList.remove('show');
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+updateOnlineStatus();
+
+// ─── Manifest (dynamic) ────────────────────────────────────────────────────────
+const manifestData = {
+  name: "LaundryTrack",
+  short_name: "LaundryTrack",
+  description: "Laundry Collection & Delivery Management",
+  start_url: "./",
+  display: "standalone",
+  background_color: "#1a2744",
+  theme_color: "#1a2744",
+  orientation: "portrait-primary",
+  icons: [
+    { src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='80' fill='%231a2744'/%3E%3Ctext x='256' y='340' font-size='280' text-anchor='middle'%3E🧺%3C/text%3E%3C/svg%3E", sizes: "512x512", type: "image/svg+xml", purpose: "any maskable" }
+  ],
+  categories: ["business", "productivity"],
+  shortcuts: [
+    { name: "New Record", short_name: "New", description: "Submit new collection/delivery", url: "./?tab=form", icons: [{ src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Ctext y='.9em' font-size='90'%3E📝%3C/text%3E%3C/svg%3E", sizes: "96x96" }] },
+    { name: "Factory Dashboard", short_name: "Factory", description: "Open factory verification", url: "./?tab=verify", icons: [{ src: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Ctext y='.9em' font-size='90'%3E🏭%3C/text%3E%3C/svg%3E", sizes: "96x96" }] }
+  ]
+};
+const manifestBlob = new Blob([JSON.stringify(manifestData)], { type: 'application/json' });
+const manifestUrl = URL.createObjectURL(manifestBlob);
+document.querySelector('link[rel="manifest"]').href = manifestUrl;
+
+// ─── LocalStorage persistence ──────────────────────────────────────────────────
+const LS_KEY = 'laundrytrack_records_v1';
+function loadRecords() {
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || []; } catch { return []; }
+}
+function saveRecords(records) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(records)); } catch {}
+}
+
+// ─── App Code ─────────────────────────────────────────────────────────────────
+if (typeof Recharts === 'undefined') {
+  document.body.innerHTML = '<div style="font-family:sans-serif;padding:40px;text-align:center;color:#dc2626"><h2>⚠ Failed to load Recharts</h2><p>Please check your internet connection and refresh.</p></div>';
+  throw new Error('Recharts not loaded');
+}
+const { useState, useRef, useEffect, useCallback } = React;
+const {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  PieChart, Pie, Cell, LineChart, Line, RadarChart, Radar, PolarGrid,
+  PolarAngleAxis, PolarRadiusAxis, AreaChart, Area
+} = Recharts;
+
+const CUSTOMERS = ["abc", "efg", "pqr", "xyz"];
+const ITEMS = ["Blanket", "Shirt", "Handkerchief"];
+const QUANTITIES = Array.from({ length: 1000 }, (_, i) => i + 1);
+const CHART_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#8b5cf6", "#06b6d4", "#ec4899"];
+const USERS = [
+  { id: 1, username: "collector1", password: "collect123", role: "collector", displayName: "Collector 1" },
+  { id: 2, username: "collector2", password: "collect456", role: "collector", displayName: "Collector 2" },
+  { id: 3, username: "factory",    password: "factory123", role: "receiver",  displayName: "Factory Manager" },
+];
+
+// Shared styles
+const labelStyle = { display:"block", marginBottom:6, fontSize:12, fontWeight:700, color:"#1a2744", letterSpacing:"0.05em", textTransform:"uppercase" };
+const inputStyle = { width:"100%", padding:"12px 14px", borderRadius:10, border:"2px solid #d0d9ee", fontSize:16, background:"#fff", color:"#1a2744", fontFamily:"inherit", outline:"none", boxSizing:"border-box", transition:"border 0.2s", WebkitAppearance:"none", appearance:"none" };
+const sInput = { ...inputStyle, padding:"10px 12px", fontSize:15 };
+const TOOLTIP_STYLE = { borderRadius:10, fontFamily:"Sora,sans-serif", fontSize:13, border:"none", boxShadow:"0 4px 20px rgba(0,0,0,0.15)" };
+
+function smallBtn(bg, extra={}) {
+  return { background:bg, color:"#fff", border:"none", borderRadius:8, padding:"8px 14px", fontSize:13, cursor:"pointer", fontFamily:"inherit", fontWeight:700, transition:"opacity 0.2s", whiteSpace:"nowrap", WebkitTapHighlightColor:"transparent", ...extra };
+}
+
+function Card({ title, children, style={}, titleRight }) {
+  return React.createElement('div', { style:{ background:"#fff", borderRadius:16, padding:"20px 18px 22px", boxShadow:"0 4px 24px rgba(26,39,68,0.08)", marginBottom:18, ...style } },
+    title && React.createElement('div', { style:{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, paddingBottom:12, borderBottom:"2px solid #eef1f8", flexWrap:"wrap", gap:8 } },
+      React.createElement('div', { style:{ fontSize:16, fontWeight:800, color:"#1a2744" } }, title),
+      titleRight
+    ),
+    children
+  );
+}
+
+function StatBadge({ label, value, color, sub }) {
+  return React.createElement('div', { style:{ background:color+"12", borderLeft:`4px solid ${color}`, borderRadius:10, padding:"12px 16px", flex:1, minWidth:110 } },
+    React.createElement('div', { style:{ fontSize:10, color, fontWeight:700, textTransform:"uppercase", letterSpacing:"0.06em" } }, label),
+    React.createElement('div', { style:{ fontSize:26, fontWeight:900, color:"#1a2744", marginTop:2 } }, value),
+    sub && React.createElement('div', { style:{ fontSize:10, color:"#9ca3af", marginTop:2 } }, sub)
+  );
+}
+
+function StatusBadge({ status }) {
+  const map = { pending:{bg:"#fef9c3",color:"#854d0e",label:"⏳ Pending"}, approved:{bg:"#dcfce7",color:"#166534",label:"✅ Approved"}, deviated:{bg:"#fee2e2",color:"#991b1b",label:"⚠ Deviated"} };
+  const s = map[status]||map.pending;
+  return React.createElement('span', { style:{ background:s.bg, color:s.color, borderRadius:20, padding:"3px 10px", fontSize:11, fontWeight:800 } }, s.label);
+}
+
+function TypeBadge({ type }) {
+  return React.createElement('span', { style:{ background:type==="collection"?"#dbeafe":"#dcfce7", color:type==="collection"?"#1d4ed8":"#166534", borderRadius:6, padding:"3px 10px", fontWeight:800, fontSize:11, textTransform:"uppercase" } }, type);
+}
+
+function getEffectiveItems(record) {
+  if ((record.verificationStatus==="approved"||record.verificationStatus==="deviated") && record.verifiedItems) return record.verifiedItems;
+  return record.items;
+}
+
+function buildFlatRows(records, statusFilter) {
+  const rows = [];
+  records.filter(r=>statusFilter.includes(r.verificationStatus)).forEach(r=>{
+    getEffectiveItems(r).forEach(item=>{
+      rows.push({ id:r.id, collector:r.collectorName||r.collector, collectorKey:r.collector, customer:r.customer, item:item.name, type:r.type, timestamp:r.timestamp, qty:item.qty, status:r.verificationStatus });
+    });
+  });
+  return rows;
+}
+
+// ─── Signature Canvas ──────────────────────────────────────────────────────────
+function SignatureCanvas({ onSave, label }) {
+  const canvasRef = useRef(null);
+  const [drawing, setDrawing] = useState(false);
+  const [hasSig, setHasSig] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const lastPos = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current, ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#f8f9fb"; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle = "#1a2744"; ctx.lineWidth = 2.5; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  }, []);
+
+  const getPos = (e, canvas) => {
+    const rect = canvas.getBoundingClientRect(), scaleX = canvas.width/rect.width, scaleY = canvas.height/rect.height;
+    if (e.touches) return { x:(e.touches[0].clientX-rect.left)*scaleX, y:(e.touches[0].clientY-rect.top)*scaleY };
+    return { x:(e.clientX-rect.left)*scaleX, y:(e.clientY-rect.top)*scaleY };
+  };
+  const startDraw = (e) => { e.preventDefault(); setDrawing(true); setSaved(false); const pos=getPos(e,canvasRef.current); lastPos.current=pos; const ctx=canvasRef.current.getContext("2d"); ctx.beginPath(); ctx.arc(pos.x,pos.y,1.5,0,Math.PI*2); ctx.fill(); setHasSig(true); };
+  const draw = (e) => { if(!drawing) return; e.preventDefault(); const canvas=canvasRef.current, ctx=canvas.getContext("2d"), pos=getPos(e,canvas); ctx.beginPath(); ctx.moveTo(lastPos.current.x,lastPos.current.y); ctx.lineTo(pos.x,pos.y); ctx.stroke(); lastPos.current=pos; };
+  const stopDraw = (e) => { e&&e.preventDefault(); setDrawing(false); };
+  const clear = () => { const ctx=canvasRef.current.getContext("2d"); ctx.fillStyle="#f8f9fb"; ctx.fillRect(0,0,canvasRef.current.width,canvasRef.current.height); setHasSig(false); setSaved(false); onSave(null); };
+  const save = () => { if(!hasSig) return; onSave(canvasRef.current.toDataURL()); setSaved(true); };
+
+  return React.createElement('div', { style:{ marginBottom:18 } },
+    React.createElement('label', { style:labelStyle }, label),
+    React.createElement('div', { style:{ position:"relative", border:"2px solid #d0d9ee", borderRadius:10, background:"#f8f9fb", overflow:"hidden" } },
+      React.createElement('canvas', { ref:canvasRef, width:500, height:150, style:{ width:"100%", height:150, display:"block", cursor:"crosshair", touchAction:"none" }, onMouseDown:startDraw, onMouseMove:draw, onMouseUp:stopDraw, onMouseLeave:stopDraw, onTouchStart:startDraw, onTouchMove:draw, onTouchEnd:stopDraw }),
+      React.createElement('div', { style:{ position:"absolute", top:8, right:8, display:"flex", gap:6 } },
+        React.createElement('button', { type:"button", onClick:clear, style:smallBtn("#e74c3c") }, "Clear"),
+        React.createElement('button', { type:"button", onClick:save, style:smallBtn(saved?"#27ae60":"#1a2744") }, saved?"✓ Saved":"Save Sig")
+      ),
+      !hasSig && React.createElement('div', { style:{ position:"absolute", bottom:10, left:0, right:0, textAlign:"center", color:"#aab4c8", fontSize:12, pointerEvents:"none" } }, "Draw signature here")
+    )
+  );
+}
+
+// ─── Collector Form ────────────────────────────────────────────────────────────
+function CollectorForm({ user, setRecords, records }) {
+  const [customer, setCustomer] = useState("");
+  const [type, setType] = useState("collection");
+  const [items, setItems] = useState([{ name:"", qty:"" }]);
+  const [signature, setSignature] = useState(null);
+  const [incharge, setIncharge] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+
+  const getNetAvailable = (customerName, itemName) => {
+    let collected=0, delivered=0;
+    records.forEach(r => {
+      if (r.customer!==customerName) return;
+      if (r.verificationStatus!=="approved" && r.verificationStatus!=="deviated") return;
+      getEffectiveItems(r).forEach(it => {
+        if (it.name!==itemName) return;
+        if (r.type==="collection") collected+=it.qty;
+        if (r.type==="delivery") delivered+=it.qty;
+      });
+    });
+    return Math.max(0, collected-delivered);
+  };
+
+  const addItem = () => setItems([...items, { name:"", qty:"" }]);
+  const removeItem = (i) => setItems(items.filter((_,idx)=>idx!==i));
+  const changeItem = (i, field, val) => { const u=[...items]; u[i][field]=val; setItems(u); };
+
+  const validate = () => {
+    if (!customer) return "Please select a customer.";
+    for (const it of items) if (!it.name||!it.qty) return "Please fill all item fields.";
+    if (type==="delivery") {
+      for (const it of items) {
+        if (!it.name||!it.qty) continue;
+        const available = getNetAvailable(customer, it.name);
+        if (parseInt(it.qty)>available) return `Delivery qty for "${it.name}" (${it.qty}) exceeds the shared customer pool for ${customer.toUpperCase()} (available: ${available}). Collections by any collector count toward this pool.`;
+      }
+    }
+    if (!incharge.trim()) return "Please enter in-charge name.";
+    if (!signature) return "Please save the customer signature.";
+    return null;
+  };
+
+  const handleSubmit = () => { const err=validate(); if(err){setError(err);return;} setError(""); setShowModal(true); };
+  const confirmSubmit = () => {
+    const record = { id:Date.now(), collector:user.username, collectorName:user.displayName, customer, type, items:items.map(i=>({name:i.name,qty:parseInt(i.qty)})), incharge, signature, timestamp:new Date().toISOString(), verificationStatus:"pending", verifiedItems:null, verifiedBy:null, verifiedAt:null, remark:"" };
+    setRecords(prev => { const next=[record,...prev]; saveRecords(next); return next; });
+    setShowModal(false); setSubmitted(true);
+    setTimeout(()=>{ setSubmitted(false); setCustomer(""); setType("collection"); setItems([{name:"",qty:""}]); setSignature(null); setIncharge(""); }, 2500);
+  };
+
+  return React.createElement('div', { style:{ maxWidth:560, margin:"0 auto" } },
+    showModal && React.createElement('div', { style:{ position:"fixed", inset:0, background:"rgba(10,20,50,0.6)", zIndex:999, display:"flex", alignItems:"center", justifyContent:"center", padding:20 } },
+      React.createElement('div', { style:{ background:"#fff", borderRadius:20, padding:"28px 24px", maxWidth:420, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.3)" } },
+        React.createElement('div', { style:{ fontSize:19, fontWeight:800, color:"#1a2744", marginBottom:14 } }, "Confirm Submission"),
+        React.createElement('div', { style:{ fontSize:14, color:"#5a6a8a", marginBottom:20, lineHeight:1.8 } },
+          React.createElement('div', null, React.createElement('strong', null, "Customer: "), customer.toUpperCase()),
+          React.createElement('div', null, React.createElement('strong', null, "Type: "), type),
+          React.createElement('div', null, React.createElement('strong', null, "In-Charge: "), incharge),
+          React.createElement('div', { style:{marginTop:8} }, React.createElement('strong', null, "Items:")),
+          ...items.map((it,i)=>React.createElement('div',{key:i,style:{paddingLeft:16}}, `• ${it.name} × ${it.qty}`)),
+          signature && React.createElement('div', { style:{marginTop:8,color:"#27ae60"} }, "✓ Signature captured")
+        ),
+        React.createElement('div', { style:{ display:"flex", gap:12 } },
+          React.createElement('button', { onClick:()=>setShowModal(false), style:{ flex:1, padding:"13px 0", borderRadius:10, border:"2px solid #d0d9ee", background:"#fff", color:"#1a2744", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" } }, "Edit"),
+          React.createElement('button', { onClick:confirmSubmit, style:{ flex:1, padding:"13px 0", borderRadius:10, border:"none", background:"linear-gradient(135deg,#1a2744,#2563eb)", color:"#fff", fontSize:15, fontWeight:700, cursor:"pointer", fontFamily:"inherit" } }, "Confirm & Submit")
+        )
+      )
+    ),
+    submitted && React.createElement('div', { style:{ background:"#e8f8ef", border:"2px solid #27ae60", borderRadius:12, padding:"14px 18px", marginBottom:18, color:"#1a6b3a", fontWeight:700, fontSize:15 } }, "✓ Record submitted! Awaiting factory verification."),
+    React.createElement(Card, { title:`New ${type.charAt(0).toUpperCase()+type.slice(1)} Record` },
+      // Customer
+      React.createElement('div', { style:{marginBottom:18} },
+        React.createElement('label', { style:labelStyle }, "Customer"),
+        React.createElement('select', { value:customer, onChange:e=>setCustomer(e.target.value), style:inputStyle },
+          React.createElement('option', { value:"" }, "Select customer"),
+          ...CUSTOMERS.map(c=>React.createElement('option',{key:c},c))
+        )
+      ),
+      // Type
+      React.createElement('div', { style:{marginBottom:20} },
+        React.createElement('label', { style:labelStyle }, "Transaction Type"),
+        React.createElement('div', { style:{ display:"flex", gap:0, borderRadius:10, overflow:"hidden", border:"2px solid #d0d9ee" } },
+          ...["collection","delivery"].map(t=>
+            React.createElement('button', { key:t, type:"button", onClick:()=>setType(t), style:{ flex:1, padding:"12px 0", border:"none", background:type===t?"linear-gradient(135deg,#1a2744,#2563eb)":"#fff", color:type===t?"#fff":"#9ca3af", fontSize:14, fontWeight:type===t?800:600, cursor:"pointer", fontFamily:"inherit", transition:"all 0.2s" } }, t.charAt(0).toUpperCase()+t.slice(1))
+          )
+        )
+      ),
+      // Items
+      React.createElement('div', { style:{marginBottom:6} },
+        React.createElement('div', { style:{ display:"grid", gridTemplateColumns:"1fr 90px 40px", gap:8, marginBottom:8 } },
+          React.createElement('label', { style:labelStyle }, "Item Name"),
+          React.createElement('label', { style:labelStyle }, "Qty"),
+          React.createElement('div')
+        ),
+        ...items.map((item,i)=>{
+          const available = type==="delivery"&&customer&&item.name ? getNetAvailable(customer,item.name) : null;
+          const overLimit = available!==null&&item.qty&&parseInt(item.qty)>available;
+          return React.createElement('div', { key:i, style:{marginBottom:12} },
+            React.createElement('div', { style:{ display:"grid", gridTemplateColumns:"1fr 90px 40px", gap:8, alignItems:"center" } },
+              React.createElement('select', { value:item.name, onChange:e=>changeItem(i,"name",e.target.value), style:inputStyle },
+                React.createElement('option',{value:""},"Select item"),
+                ...ITEMS.map(it=>React.createElement('option',{key:it},it))
+              ),
+              React.createElement('select', { value:item.qty, onChange:e=>changeItem(i,"qty",e.target.value), style:{...inputStyle,border:overLimit?"2px solid #e74c3c":"2px solid #d0d9ee"} },
+                React.createElement('option',{value:""},"—"),
+                ...QUANTITIES.map(q=>React.createElement('option',{key:q},q))
+              ),
+              items.length>1
+                ? React.createElement('button',{type:"button",onClick:()=>removeItem(i),style:{...smallBtn("#e74c3c"),padding:"10px 10px",fontSize:15,minHeight:44}},"✕")
+                : React.createElement('div')
+            ),
+            type==="delivery"&&customer&&item.name && React.createElement('div', { style:{ fontSize:12, marginTop:5, paddingLeft:2, color:overLimit?"#dc2626":available===0?"#dc2626":"#16a34a", fontWeight:overLimit||available===0?700:600 } },
+              available===0?"⚠ No verified stock in customer pool for delivery":overLimit?`⚠ Exceeds customer pool — only ${available} available`:`✓ Customer pool available: ${available} units (all collectors)`
+            )
+          );
+        }),
+        React.createElement('button', { type:"button", onClick:addItem, style:{...smallBtn("#2563eb"),marginTop:6,padding:"9px 16px"} }, "+ Add Item")
+      ),
+      // Signature
+      React.createElement('div', { style:{marginTop:20} }, React.createElement(SignatureCanvas, { label:"Customer Signature", onSave:setSignature })),
+      // In-charge
+      React.createElement('div', { style:{marginBottom:20} },
+        React.createElement('label', { style:labelStyle }, "Customer In-Charge Name"),
+        React.createElement('input', { type:"text", value:incharge, onChange:e=>setIncharge(e.target.value), placeholder:"Enter in-charge name", style:inputStyle })
+      ),
+      error && React.createElement('div', { style:{ background:"#fef2f2", border:"2px solid #fca5a5", borderRadius:10, padding:"12px 14px", color:"#b91c1c", fontSize:14, marginBottom:14, fontWeight:600 } }, `⚠ ${error}`),
+      React.createElement('button', { onClick:handleSubmit, style:{ width:"100%", padding:"16px 0", background:"linear-gradient(135deg,#1a2744,#2563eb)", color:"#fff", border:"none", borderRadius:12, fontSize:17, fontWeight:800, cursor:"pointer", fontFamily:"inherit", minHeight:54 } }, "Submit Record")
+    )
+  );
+}
+
+// ─── Collector History ──────────────────────────────────────────────────────────
+function CollectorHistory({ records }) {
+  const pending=records.filter(r=>r.verificationStatus==="pending").length;
+  const approved=records.filter(r=>r.verificationStatus==="approved").length;
+  const deviated=records.filter(r=>r.verificationStatus==="deviated").length;
+  return React.createElement('div', null,
+    React.createElement('div', { style:{ display:"flex", gap:10, marginBottom:20, flexWrap:"wrap" } },
+      React.createElement(StatBadge,{label:"Total",value:records.length,color:"#2563eb"}),
+      React.createElement(StatBadge,{label:"Pending",value:pending,color:"#f59e0b"}),
+      React.createElement(StatBadge,{label:"Approved",value:approved,color:"#27ae60"}),
+      React.createElement(StatBadge,{label:"Deviated",value:deviated,color:"#e74c3c"})
+    ),
+    records.length===0
+      ? React.createElement(Card, null, React.createElement('div', { style:{ textAlign:"center", padding:40, color:"#aab4c8" } }, "No records yet."))
+      : records.map(r=>React.createElement(RecordCard,{key:r.id,record:r,isFactory:false}))
+  );
+}
+
+// ─── Verify Form ────────────────────────────────────────────────────────────────
+function VerifyForm({ record:r, onVerify }) {
+  const [verifiedItems, setVerifiedItems] = useState(r.items.map(it=>({name:it.name,qty:it.qty})));
+  const [remark, setRemark] = useState("");
+  const [done, setDone] = useState(false);
+  const updateQty = (i,val) => { const u=[...verifiedItems]; u[i].qty=parseInt(val)||0; setVerifiedItems(u); };
+  const hasDeviation = verifiedItems.some((vi,i)=>vi.qty!==r.items[i]?.qty);
+  const handleSubmit = () => {
+    if (hasDeviation&&!remark.trim()) { alert("Please add a remark explaining the deviation."); return; }
+    onVerify(r.id,{verifiedItems,remark,status:hasDeviation?"deviated":"approved"});
+    setDone(true);
+  };
+  if (done) return React.createElement('div', { style:{ color:"#27ae60", fontWeight:700, fontSize:14, textAlign:"center", padding:"20px 0" } }, "✓ Verification saved!");
+  return React.createElement('div', null,
+    React.createElement('div', { style:{ fontSize:13, color:"#6b7280", marginBottom:12, fontStyle:"italic" } }, "Edit quantities to match actual items received:"),
+    React.createElement('div', { style:{ display:"grid", gridTemplateColumns:"1fr 70px 80px 50px", gap:6, marginBottom:6 } },
+      ...["Item","Recorded","Actual","Diff"].map(h=>React.createElement('div',{key:h,style:{fontSize:10,fontWeight:800,color:"#6b7280",textTransform:"uppercase"}},h))
+    ),
+    ...verifiedItems.map((vi,i)=>{
+      const orig=r.items[i]?.qty||0, diff=vi.qty-orig;
+      return React.createElement('div', { key:i, style:{ display:"grid", gridTemplateColumns:"1fr 70px 80px 50px", gap:6, marginBottom:10, alignItems:"center" } },
+        React.createElement('div', { style:{ fontSize:13, fontWeight:600, color:"#1a2744" } }, vi.name),
+        React.createElement('div', { style:{ fontSize:13, color:"#6b7280", textAlign:"center", background:"#f0f4ff", borderRadius:6, padding:"8px 0" } }, orig),
+        React.createElement('select', { value:vi.qty, onChange:e=>updateQty(i,e.target.value), style:{ ...inputStyle, padding:"8px 8px", fontSize:15, border:diff!==0?"2px solid #f59e0b":"2px solid #d0d9ee" } },
+          ...QUANTITIES.map(q=>React.createElement('option',{key:q},q))
+        ),
+        React.createElement('div', { style:{ fontSize:12, fontWeight:800, textAlign:"center", color:diff===0?"#27ae60":diff>0?"#2563eb":"#e74c3c" } }, diff===0?"✓":(diff>0?"+":"")+diff)
+      );
+    }),
+    React.createElement('div', { style:{marginTop:14} },
+      React.createElement('label', { style:{...labelStyle,fontSize:11} }, "Remark", hasDeviation?React.createElement('span',{style:{color:"#e74c3c"}}," *required"):React.createElement('span',{style:{color:"#9ca3af"}}," (optional)")),
+      React.createElement('textarea', { value:remark, onChange:e=>setRemark(e.target.value), placeholder:hasDeviation?"Describe the deviation...":"Optional note...", style:{...inputStyle,height:80,resize:"vertical",fontSize:14} })
+    ),
+    React.createElement('button', { onClick:handleSubmit, style:{ width:"100%", marginTop:12, padding:"14px 0", borderRadius:10, border:"none", background:hasDeviation?"linear-gradient(135deg,#7f1d1d,#dc2626)":"linear-gradient(135deg,#14532d,#16a34a)", color:"#fff", fontSize:14, fontWeight:800, cursor:"pointer", fontFamily:"inherit", minHeight:50 } },
+      hasDeviation?"⚠ Submit — Mark as Deviated":"✅ Approve — All Quantities Match"
+    )
+  );
+}
+
+// ─── Record Card ────────────────────────────────────────────────────────────────
+function RecordCard({ record:r, isFactory, onVerify }) {
+  const [expanded, setExpanded] = useState(isFactory&&r.verificationStatus==="pending");
+  const borderColor = r.verificationStatus==="deviated"?"#fca5a5":r.verificationStatus==="approved"?"#86efac":"#eef1f8";
+  return React.createElement('div', { style:{ background:"#fff", borderRadius:14, marginBottom:14, boxShadow:"0 2px 14px rgba(26,39,68,0.07)", border:`1.5px solid ${borderColor}`, overflow:"hidden" } },
+    React.createElement('div', { onClick:()=>setExpanded(!expanded), style:{ display:"flex", alignItems:"center", gap:8, padding:"14px 16px", cursor:"pointer", flexWrap:"wrap", WebkitTapHighlightColor:"transparent" } },
+      React.createElement(TypeBadge,{type:r.type}),
+      React.createElement('span', { style:{ fontWeight:800, color:"#1a2744", textTransform:"uppercase", fontSize:14 } }, r.customer),
+      React.createElement('span', { style:{ color:"#6b7280", fontSize:13, fontWeight:600 } }, r.collectorName),
+      React.createElement('span', { style:{ color:"#9ca3af", fontSize:11 } }, new Date(r.timestamp).toLocaleDateString()+" "+new Date(r.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})),
+      React.createElement('span', { style:{ fontSize:12, color:"#374151", flexBasis:"100%" } }, r.items.map(i=>`${i.name}×${i.qty}`).join(", ")+" (Total: "+r.items.reduce((a,i)=>a+i.qty,0)+")"),
+      React.createElement(StatusBadge,{status:r.verificationStatus}),
+      React.createElement('span', { style:{ color:"#9ca3af", fontSize:14, marginLeft:"auto" } }, expanded?"▲":"▼")
+    ),
+    expanded && React.createElement('div', { style:{ borderTop:"1.5px solid #eef1f8" } },
+      React.createElement('div', { style:{ padding:"18px 16px", borderBottom:"1.5px solid #eef1f8" } },
+        React.createElement('div', { style:{ fontSize:11, fontWeight:800, color:"#2563eb", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:12 } }, "📦 Collector's Recorded Data"),
+        React.createElement('table', { style:{ width:"100%", borderCollapse:"collapse", fontSize:13, marginBottom:12 } },
+          React.createElement('thead', null, React.createElement('tr', { style:{background:"#eff6ff"} },
+            React.createElement('th',{style:{padding:"7px 10px",textAlign:"left",fontWeight:700,color:"#1d4ed8",fontSize:11}},"Item"),
+            React.createElement('th',{style:{padding:"7px 10px",textAlign:"center",fontWeight:700,color:"#1d4ed8",fontSize:11}},"Qty")
+          )),
+          React.createElement('tbody', null,
+            ...r.items.map((it,i)=>React.createElement('tr',{key:i,style:{borderTop:"1px solid #eef1f8"}},
+              React.createElement('td',{style:{padding:"8px 10px",color:"#374151"}},it.name),
+              React.createElement('td',{style:{padding:"8px 10px",textAlign:"center",fontWeight:700}},it.qty)
+            )),
+            React.createElement('tr',{style:{borderTop:"2px solid #c7d2fe",background:"#eff6ff"}},
+              React.createElement('td',{style:{padding:"8px 10px",fontWeight:800}},"Total"),
+              React.createElement('td',{style:{padding:"8px 10px",textAlign:"center",fontWeight:900,color:"#2563eb"}},r.items.reduce((a,i)=>a+i.qty,0))
+            )
+          )
+        ),
+        // C2: In-charge above signature
+        React.createElement('div', { style:{ marginBottom:12, padding:"10px 12px", background:"#f0f4ff", borderRadius:10, border:"1.5px solid #c7d2fe" } },
+          React.createElement('div', { style:{ fontSize:10, fontWeight:800, color:"#6b7280", textTransform:"uppercase", letterSpacing:"0.05em", marginBottom:4 } }, "👤 Customer In-Charge"),
+          React.createElement('div', { style:{ fontSize:15, fontWeight:800, color:"#1a2744" } }, r.incharge||"—")
+        ),
+        r.signature && React.createElement('div', null,
+          React.createElement('div', { style:{ fontSize:11, fontWeight:700, color:"#6b7280", textTransform:"uppercase", marginBottom:6 } }, "Customer Signature"),
+          React.createElement('img', { src:r.signature, alt:"sig", style:{ maxHeight:60, border:"1px solid #e5e7eb", borderRadius:8, background:"#f8f9fb" } })
+        )
+      ),
+      React.createElement('div', { style:{ padding:"18px 16px" } },
+        React.createElement('div', { style:{ fontSize:11, fontWeight:800, color:"#166534", textTransform:"uppercase", letterSpacing:"0.06em", marginBottom:12 } }, "🏭 Factory Verification"),
+        isFactory&&r.verificationStatus==="pending" && React.createElement(VerifyForm,{record:r,onVerify}),
+        !isFactory&&r.verificationStatus==="pending" && React.createElement('div', { style:{ textAlign:"center", padding:"24px 0", color:"#f59e0b", fontWeight:700 } }, "⏳ Awaiting factory verification"),
+        r.verificationStatus!=="pending"&&r.verifiedItems && React.createElement('div', null,
+          React.createElement('table', { style:{ width:"100%", borderCollapse:"collapse", fontSize:13, marginBottom:12 } },
+            React.createElement('thead', null, React.createElement('tr', { style:{ background:r.verificationStatus==="approved"?"#f0fdf4":"#fff7ed" } },
+              React.createElement('th',{style:{padding:"7px 10px",textAlign:"left",fontWeight:700,color:r.verificationStatus==="approved"?"#166534":"#9a3412",fontSize:11}},"Item"),
+              React.createElement('th',{style:{padding:"7px 10px",textAlign:"center",fontWeight:700,color:r.verificationStatus==="approved"?"#166534":"#9a3412",fontSize:11}},"Actual Qty"),
+              React.createElement('th',{style:{padding:"7px 10px",textAlign:"center",fontWeight:700,color:r.verificationStatus==="approved"?"#166534":"#9a3412",fontSize:11}},"Diff")
+            )),
+            React.createElement('tbody', null,
+              ...r.verifiedItems.map((vi,i)=>{const orig=r.items.find(it=>it.name===vi.name);const diff=vi.qty-(orig?orig.qty:0);return React.createElement('tr',{key:i,style:{borderTop:"1px solid #eef1f8"}},
+                React.createElement('td',{style:{padding:"8px 10px"}},vi.name),
+                React.createElement('td',{style:{padding:"8px 10px",textAlign:"center",fontWeight:700}},vi.qty),
+                React.createElement('td',{style:{padding:"8px 10px",textAlign:"center",fontWeight:800,color:diff===0?"#27ae60":diff>0?"#2563eb":"#e74c3c"}},diff===0?"✓":(diff>0?"+":"")+diff)
+              );}),
+              React.createElement('tr',{style:{borderTop:"2px solid #d0d9ee",background:r.verificationStatus==="approved"?"#f0fdf4":"#fff7ed"}},
+                React.createElement('td',{style:{padding:"8px 10px",fontWeight:800}},"Total"),
+                React.createElement('td',{style:{padding:"8px 10px",textAlign:"center",fontWeight:900}},r.verifiedItems.reduce((a,i)=>a+i.qty,0)),
+                React.createElement('td',{style:{padding:"8px 10px",textAlign:"center",fontWeight:900}},()=>{const d=r.verifiedItems.reduce((a,i)=>a+i.qty,0)-r.items.reduce((a,i)=>a+i.qty,0);return React.createElement('span',{style:{color:d===0?"#27ae60":"#e74c3c"}},d===0?"✓":(d>0?"+":"")+d);})()
+              )
+            )
+          ),
+          r.remark && React.createElement('div', { style:{ background:"#fff7ed", border:"2px solid #fed7aa", borderRadius:10, padding:"12px 14px", marginBottom:12 } },
+            React.createElement('div', { style:{ fontSize:11, fontWeight:800, color:"#9a3412", textTransform:"uppercase", marginBottom:4 } }, "⚠ Deviation Remark"),
+            React.createElement('div', { style:{ fontSize:13, color:"#7c2d12" } }, r.remark)
+          ),
+          React.createElement('div', { style:{ fontSize:11, color:"#9ca3af", borderTop:"1px solid #eef1f8", paddingTop:10 } }, "Verified by ", React.createElement('strong',{style:{color:"#374151"}},r.verifiedBy), " · ", new Date(r.verifiedAt).toLocaleString())
+        )
+      )
+    )
+  );
+}
+
+// ─── Summary Content (shared) ──────────────────────────────────────────────────
+function SummaryContent({ flatRows, noticeEl }) {
+  const [fCollector, setFCollector] = useState("");
+  const [fCustomer, setFCustomer] = useState("");
+  const [fItem, setFItem] = useState("");
+  const [fDateFrom, setFDateFrom] = useState("");
+  const [fDateTo, setFDateTo] = useState("");
+  const [groupBy, setGroupBy] = useState("customer");
+  const [chartType, setChartType] = useState("bar");
+
+  const collectors = [...new Set(flatRows.map(r=>r.collectorKey))];
+  const filtered = flatRows.filter(row => {
+    if (fCollector&&row.collectorKey!==fCollector) return false;
+    if (fCustomer&&row.customer!==fCustomer) return false;
+    if (fItem&&row.item!==fItem) return false;
+    if (fDateFrom&&new Date(row.timestamp)<new Date(fDateFrom)) return false;
+    if (fDateTo&&new Date(row.timestamp)>new Date(fDateTo+"T23:59:59")) return false;
+    return true;
+  });
+
+  const collectionRows = filtered.filter(r=>r.type==="collection");
+  const deliveryRows = filtered.filter(r=>r.type==="delivery");
+  const totalCollected = collectionRows.reduce((a,r)=>a+r.qty,0);
+  const totalDelivered = deliveryRows.reduce((a,r)=>a+r.qty,0);
+  const netPending = totalCollected-totalDelivered;
+
+  const tableMap = {};
+  filtered.forEach(row=>{
+    const key=`${row.customer}||${row.item}`;
+    if (!tableMap[key]) tableMap[key]={customer:row.customer,item:row.item,collected:0,delivered:0,collectTS:null,deliverTS:null,collectors:new Set(),deliverers:new Set()};
+    if (row.type==="collection"){tableMap[key].collected+=row.qty;tableMap[key].collectors.add(row.collector);if(!tableMap[key].collectTS||new Date(row.timestamp)<new Date(tableMap[key].collectTS))tableMap[key].collectTS=row.timestamp;}
+    else{tableMap[key].delivered+=row.qty;tableMap[key].deliverers.add(row.collector);if(!tableMap[key].deliverTS||new Date(row.timestamp)>new Date(tableMap[key].deliverTS))tableMap[key].deliverTS=row.timestamp;}
+  });
+  const tableRows = Object.values(tableMap).map(r=>({...r,collectors:[...r.collectors].join(", "),deliverers:[...r.deliverers].join(", ")}));
+  const grandCollected = tableRows.reduce((a,r)=>a+r.collected,0);
+  const grandDelivered = tableRows.reduce((a,r)=>a+r.delivered,0);
+
+  const buildChartData = () => {
+    const map={};
+    filtered.forEach(row=>{
+      const key=groupBy==="customer"?row.customer:groupBy==="collector"?row.collector:groupBy==="item"?row.item:new Date(row.timestamp).toLocaleDateString();
+      if(!map[key]) map[key]={name:key,Collected:0,Delivered:0};
+      if(row.type==="collection") map[key].Collected+=row.qty; else map[key].Delivered+=row.qty;
+    });
+    return Object.values(map).sort((a,b)=>a.name>b.name?1:-1);
+  };
+  const chartData = buildChartData();
+  const pieData = [{name:"Collected",value:totalCollected},{name:"Delivered",value:totalDelivered},{name:"Net Pending",value:Math.max(0,netPending)}].filter(d=>d.value>0);
+  const itemMap2={}; filtered.forEach(row=>{if(!itemMap2[row.item])itemMap2[row.item]=0;itemMap2[row.item]+=row.qty;}); const itemPieData=Object.entries(itemMap2).map(([name,value])=>({name,value}));
+  const fmtDate = ts=>ts?new Date(ts).toLocaleString([],{dateStyle:"short",timeStyle:"short"}):"—";
+
+  return React.createElement('div', null,
+    noticeEl,
+    React.createElement('div', { style:{ display:"flex", gap:10, marginBottom:18, flexWrap:"wrap" } },
+      React.createElement(StatBadge,{label:"Total Collected",value:totalCollected,color:"#2563eb",sub:`${collectionRows.length} items`}),
+      React.createElement(StatBadge,{label:"Total Delivered",value:totalDelivered,color:"#16a34a",sub:`${deliveryRows.length} items`}),
+      React.createElement(StatBadge,{label:"Net Pending",value:Math.max(0,netPending),color:"#f59e0b",sub:"collected − delivered"})
+    ),
+    React.createElement(Card, { title:"🔍 Filters" },
+      React.createElement('div', { style:{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))", gap:10 } },
+        React.createElement('div', null, React.createElement('label',{style:{...labelStyle,fontSize:10}},"Collector"), React.createElement('select',{value:fCollector,onChange:e=>setFCollector(e.target.value),style:sInput},React.createElement('option',{value:""},"All"),...collectors.map(c=>React.createElement('option',{key:c},c)))),
+        React.createElement('div', null, React.createElement('label',{style:{...labelStyle,fontSize:10}},"Customer"), React.createElement('select',{value:fCustomer,onChange:e=>setFCustomer(e.target.value),style:sInput},React.createElement('option',{value:""},"All"),...CUSTOMERS.map(c=>React.createElement('option',{key:c},c)))),
+        React.createElement('div', null, React.createElement('label',{style:{...labelStyle,fontSize:10}},"Item"), React.createElement('select',{value:fItem,onChange:e=>setFItem(e.target.value),style:sInput},React.createElement('option',{value:""},"All"),...ITEMS.map(i=>React.createElement('option',{key:i},i)))),
+        React.createElement('div', null, React.createElement('label',{style:{...labelStyle,fontSize:10}},"From Date"), React.createElement('input',{type:"date",value:fDateFrom,onChange:e=>setFDateFrom(e.target.value),style:sInput})),
+        React.createElement('div', null, React.createElement('label',{style:{...labelStyle,fontSize:10}},"To Date"), React.createElement('input',{type:"date",value:fDateTo,onChange:e=>setFDateTo(e.target.value),style:sInput})),
+        React.createElement('div', { style:{display:"flex",alignItems:"flex-end"} }, React.createElement('button',{onClick:()=>{setFCollector("");setFCustomer("");setFItem("");setFDateFrom("");setFDateTo("");},style:{...smallBtn("#6b7280"),width:"100%",padding:"11px 0"}},"Clear All"))
+      )
+    ),
+    React.createElement(Card, { title:"📋 Grand Total Summary", titleRight:React.createElement('span',{style:{fontSize:12,color:"#9ca3af",fontWeight:600}},`${tableRows.length} rows`) },
+      tableRows.length===0
+        ? React.createElement('div',{style:{textAlign:"center",padding:40,color:"#aab4c8"}},"No data yet.")
+        : React.createElement('div', { style:{ overflowX:"auto", WebkitOverflowScrolling:"touch" } },
+          React.createElement('table', { style:{ width:"100%", borderCollapse:"collapse", fontSize:12, minWidth:600 } },
+            React.createElement('thead', null, React.createElement('tr', { style:{ background:"linear-gradient(135deg,#1a2744,#1e3a8a)" } },
+              ...["Customer","Item","Collected By","Delivered By","Collection Date","Delivery Date","Qty Collected","Qty Delivered","Net Pending"].map(h=>
+                React.createElement('th',{key:h,style:{padding:"10px 10px",textAlign:"left",fontWeight:700,color:"#fff",fontSize:10,textTransform:"uppercase",whiteSpace:"nowrap"}},h)
+              )
+            )),
+            React.createElement('tbody', null,
+              ...tableRows.map((row,idx)=>{
+                const net=Math.max(0,row.collected-row.delivered);
+                return React.createElement('tr',{key:idx,style:{borderTop:"1px solid #eef1f8",background:idx%2===0?"#fff":"#f8faff"}},
+                  React.createElement('td',{style:{padding:"9px 10px",fontWeight:800,color:"#2563eb",textTransform:"uppercase"}},row.customer),
+                  React.createElement('td',{style:{padding:"9px 10px"}},React.createElement('span',{style:{background:"#f0f4ff",color:"#1d4ed8",borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:700}},row.item)),
+                  React.createElement('td',{style:{padding:"9px 10px",color:"#374151",fontSize:11}},row.collectors||"—"),
+                  React.createElement('td',{style:{padding:"9px 10px",color:"#374151",fontSize:11}},row.deliverers||"—"),
+                  React.createElement('td',{style:{padding:"9px 10px",color:"#374151",fontSize:11,whiteSpace:"nowrap"}},fmtDate(row.collectTS)),
+                  React.createElement('td',{style:{padding:"9px 10px",color:"#374151",fontSize:11,whiteSpace:"nowrap"}},fmtDate(row.deliverTS)),
+                  React.createElement('td',{style:{padding:"9px 10px",textAlign:"center"}},React.createElement('span',{style:{background:"#dbeafe",color:"#1d4ed8",borderRadius:8,padding:"4px 10px",fontWeight:900,fontSize:13}},row.collected)),
+                  React.createElement('td',{style:{padding:"9px 10px",textAlign:"center"}},React.createElement('span',{style:{background:"#dcfce7",color:"#166534",borderRadius:8,padding:"4px 10px",fontWeight:900,fontSize:13}},row.delivered)),
+                  React.createElement('td',{style:{padding:"9px 10px",textAlign:"center"}},React.createElement('span',{style:{background:net>0?"#fff7ed":"#f0fdf4",color:net>0?"#c2410c":"#166534",borderRadius:8,padding:"4px 10px",fontWeight:900,fontSize:13}},net))
+                );
+              })
+            ),
+            React.createElement('tfoot', null, React.createElement('tr', { style:{ background:"linear-gradient(135deg,#1a2744,#1e3a8a)", borderTop:"3px solid #1a2744" } },
+              React.createElement('td',{colSpan:6,style:{padding:"11px 10px",fontWeight:900,color:"#fff",fontSize:13,textTransform:"uppercase"}},"Grand Total"),
+              React.createElement('td',{style:{padding:"11px 10px",textAlign:"center"}},React.createElement('span',{style:{background:"#60a5fa",color:"#fff",borderRadius:8,padding:"4px 12px",fontWeight:900,fontSize:14}},grandCollected)),
+              React.createElement('td',{style:{padding:"11px 10px",textAlign:"center"}},React.createElement('span',{style:{background:"#4ade80",color:"#166534",borderRadius:8,padding:"4px 12px",fontWeight:900,fontSize:14}},grandDelivered)),
+              React.createElement('td',{style:{padding:"11px 10px",textAlign:"center"}},React.createElement('span',{style:{background:"#f59e0b",color:"#fff",borderRadius:8,padding:"4px 12px",fontWeight:900,fontSize:14}},Math.max(0,grandCollected-grandDelivered)))
+            ))
+          )
+        )
+    ),
+    chartData.length>0 && React.createElement(Card, { title:"📊 Charts",
+      titleRight: React.createElement('div', { style:{ display:"flex", gap:6, flexWrap:"wrap" } },
+        ...["customer","collector","item","date"].map(k=>React.createElement('button',{key:k,onClick:()=>setGroupBy(k),style:{...smallBtn(groupBy===k?"#2563eb":"#e5e7eb"),color:groupBy===k?"#fff":"#374151",padding:"5px 10px",fontSize:11}},k.charAt(0).toUpperCase()+k.slice(1))),
+        React.createElement('span',{style:{width:"100%"}}),
+        ...["bar","line"].map(k=>React.createElement('button',{key:k,onClick:()=>setChartType(k),style:{...smallBtn(chartType===k?"#8b5cf6":"#e5e7eb"),color:chartType===k?"#fff":"#374151",padding:"5px 10px",fontSize:11}},k.charAt(0).toUpperCase()+k.slice(1)))
+      )
+    },
+      React.createElement('div', { style:{marginBottom:24} },
+        React.createElement('div',{style:{fontSize:13,fontWeight:700,color:"#1a2744",marginBottom:12}},"Collected vs Delivered"),
+        React.createElement(ResponsiveContainer,{width:"100%",height:220},
+          chartType==="bar"
+            ? React.createElement(BarChart,{data:chartData,margin:{top:5,right:10,left:-10,bottom:5}},React.createElement(CartesianGrid,{strokeDasharray:"3 3",stroke:"#eef1f8"}),React.createElement(XAxis,{dataKey:"name",tick:{fontSize:11,fill:"#6b7280"}}),React.createElement(YAxis,{tick:{fontSize:11,fill:"#6b7280"}}),React.createElement(Tooltip,{contentStyle:TOOLTIP_STYLE}),React.createElement(Legend),React.createElement(Bar,{dataKey:"Collected",fill:"#2563eb",radius:[6,6,0,0]}),React.createElement(Bar,{dataKey:"Delivered",fill:"#16a34a",radius:[6,6,0,0]}))
+            : React.createElement(LineChart,{data:chartData,margin:{top:5,right:10,left:-10,bottom:5}},React.createElement(CartesianGrid,{strokeDasharray:"3 3",stroke:"#eef1f8"}),React.createElement(XAxis,{dataKey:"name",tick:{fontSize:11,fill:"#6b7280"}}),React.createElement(YAxis,{tick:{fontSize:11,fill:"#6b7280"}}),React.createElement(Tooltip,{contentStyle:TOOLTIP_STYLE}),React.createElement(Legend),React.createElement(Line,{type:"monotone",dataKey:"Collected",stroke:"#2563eb",strokeWidth:3,dot:{r:4,fill:"#2563eb"}}),React.createElement(Line,{type:"monotone",dataKey:"Delivered",stroke:"#16a34a",strokeWidth:3,dot:{r:4,fill:"#16a34a"}}))
+        )
+      ),
+      React.createElement('div', { style:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 } },
+        React.createElement('div', null,
+          React.createElement('div',{style:{fontSize:12,fontWeight:700,color:"#1a2744",marginBottom:10,textAlign:"center"}},"Collection Split"),
+          React.createElement(ResponsiveContainer,{width:"100%",height:180},
+            React.createElement(PieChart,null,React.createElement(Pie,{data:pieData,cx:"50%",cy:"50%",outerRadius:70,dataKey:"value",label:({percent})=>`${(percent*100).toFixed(0)}%`,labelLine:false},
+              ...pieData.map((_,i)=>React.createElement(Cell,{key:i,fill:["#2563eb","#16a34a","#f59e0b"][i]||CHART_COLORS[i]}))
+            ),React.createElement(Tooltip,{contentStyle:TOOLTIP_STYLE}))
+          )
+        ),
+        React.createElement('div', null,
+          React.createElement('div',{style:{fontSize:12,fontWeight:700,color:"#1a2744",marginBottom:10,textAlign:"center"}},"Item Breakdown"),
+          React.createElement(ResponsiveContainer,{width:"100%",height:180},
+            React.createElement(PieChart,null,React.createElement(Pie,{data:itemPieData,cx:"50%",cy:"50%",innerRadius:35,outerRadius:70,dataKey:"value",label:({percent})=>`${(percent*100).toFixed(0)}%`,labelLine:false},
+              ...itemPieData.map((_,i)=>React.createElement(Cell,{key:i,fill:CHART_COLORS[i%CHART_COLORS.length]}))
+            ),React.createElement(Tooltip,{contentStyle:TOOLTIP_STYLE}),React.createElement(Legend,{wrapperStyle:{fontSize:11}}))
+          )
+        )
+      )
+    )
+  );
+}
+
+function SummaryDashboard({ records }) {
+  const verifiedCount = records.filter(r=>r.verificationStatus==="approved"||r.verificationStatus==="deviated").length;
+  return React.createElement(SummaryContent, { flatRows:buildFlatRows(records,["approved","deviated"]),
+    noticeEl: React.createElement('div',{style:{background:"#f0fdf4",border:"2px solid #86efac",borderRadius:10,padding:"10px 16px",marginBottom:16}},
+      React.createElement('span',{style:{fontSize:13,color:"#166534",fontWeight:700}},`✅ Verified records only (approved + deviated) — ${verifiedCount} of ${records.length} verified`)
+    )
+  });
+}
+
+
+// ─── Incoming Load Content (collection-only, pre-verification) ─────────────────
+function IncomingLoadContent({ flatRows, noticeEl }) {
+  const [fCollector, setFCollector] = useState("");
+  const [fCustomer, setFCustomer] = useState("");
+  const [fItem, setFItem] = useState("");
+  const [fDateFrom, setFDateFrom] = useState("");
+  const [fDateTo, setFDateTo] = useState("");
+  const [groupBy, setGroupBy] = useState("customer");
+
+  const collectors = [...new Set(flatRows.map(r=>r.collectorKey))];
+  // Only collection rows
+  const filtered = flatRows.filter(row => {
+    if (row.type !== "collection") return false;
+    if (fCollector&&row.collectorKey!==fCollector) return false;
+    if (fCustomer&&row.customer!==fCustomer) return false;
+    if (fItem&&row.item!==fItem) return false;
+    if (fDateFrom&&new Date(row.timestamp)<new Date(fDateFrom)) return false;
+    if (fDateTo&&new Date(row.timestamp)>new Date(fDateTo+"T23:59:59")) return false;
+    return true;
+  });
+
+  const totalCollected = filtered.reduce((a,r)=>a+r.qty,0);
+
+  // Group by customer+item for table
+  const tableMap = {};
+  filtered.forEach(row=>{
+    const key=`${row.customer}||${row.item}`;
+    if (!tableMap[key]) tableMap[key]={customer:row.customer,item:row.item,collected:0,collectTS:null,collectors:new Set()};
+    tableMap[key].collected+=row.qty;
+    tableMap[key].collectors.add(row.collector);
+    if(!tableMap[key].collectTS||new Date(row.timestamp)<new Date(tableMap[key].collectTS)) tableMap[key].collectTS=row.timestamp;
+  });
+  const tableRows = Object.values(tableMap).map(r=>({...r,collectors:[...r.collectors].join(", ")}));
+  const grandCollected = tableRows.reduce((a,r)=>a+r.collected,0);
+
+  const buildChartData = () => {
+    const map={};
+    filtered.forEach(row=>{
+      const key=groupBy==="customer"?row.customer:groupBy==="collector"?row.collector:groupBy==="item"?row.item:new Date(row.timestamp).toLocaleDateString();
+      if(!map[key]) map[key]={name:key,Collected:0};
+      map[key].Collected+=row.qty;
+    });
+    return Object.values(map).sort((a,b)=>a.name>b.name?1:-1);
+  };
+  const chartData = buildChartData();
+  const fmtDate = ts=>ts?new Date(ts).toLocaleString([],{dateStyle:"short",timeStyle:"short"}):"—";
+
+  return React.createElement('div', null,
+    noticeEl,
+    // Single stat badge — collected only
+    React.createElement('div', { style:{ display:"flex", gap:10, marginBottom:18 } },
+      React.createElement(StatBadge,{label:"Total Qty Incoming",value:totalCollected,color:"#2563eb",sub:`${filtered.length} line items`})
+    ),
+    React.createElement(Card, { title:"🔍 Filters" },
+      React.createElement('div', { style:{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))", gap:10 } },
+        React.createElement('div', null, React.createElement('label',{style:{...labelStyle,fontSize:10}},"Collector"), React.createElement('select',{value:fCollector,onChange:e=>setFCollector(e.target.value),style:sInput},React.createElement('option',{value:""},"All"),...collectors.map(c=>React.createElement('option',{key:c},c)))),
+        React.createElement('div', null, React.createElement('label',{style:{...labelStyle,fontSize:10}},"Customer"), React.createElement('select',{value:fCustomer,onChange:e=>setFCustomer(e.target.value),style:sInput},React.createElement('option',{value:""},"All"),...CUSTOMERS.map(c=>React.createElement('option',{key:c},c)))),
+        React.createElement('div', null, React.createElement('label',{style:{...labelStyle,fontSize:10}},"Item"), React.createElement('select',{value:fItem,onChange:e=>setFItem(e.target.value),style:sInput},React.createElement('option',{value:""},"All"),...ITEMS.map(i=>React.createElement('option',{key:i},i)))),
+        React.createElement('div', null, React.createElement('label',{style:{...labelStyle,fontSize:10}},"From Date"), React.createElement('input',{type:"date",value:fDateFrom,onChange:e=>setFDateFrom(e.target.value),style:sInput})),
+        React.createElement('div', null, React.createElement('label',{style:{...labelStyle,fontSize:10}},"To Date"), React.createElement('input',{type:"date",value:fDateTo,onChange:e=>setFDateTo(e.target.value),style:sInput})),
+        React.createElement('div', { style:{display:"flex",alignItems:"flex-end"} }, React.createElement('button',{onClick:()=>{setFCollector("");setFCustomer("");setFItem("");setFDateFrom("");setFDateTo("");},style:{...smallBtn("#6b7280"),width:"100%",padding:"11px 0"}},"Clear All"))
+      )
+    ),
+    React.createElement(Card, { title:"📋 Incoming Collections Summary", titleRight:React.createElement('span',{style:{fontSize:12,color:"#9ca3af",fontWeight:600}},`${tableRows.length} rows`) },
+      tableRows.length===0
+        ? React.createElement('div',{style:{textAlign:"center",padding:40,color:"#aab4c8"}},"No pending collections.")
+        : React.createElement('div', { style:{ overflowX:"auto", WebkitOverflowScrolling:"touch" } },
+          React.createElement('table', { style:{ width:"100%", borderCollapse:"collapse", fontSize:12, minWidth:400 } },
+            React.createElement('thead', null, React.createElement('tr', { style:{ background:"linear-gradient(135deg,#1a2744,#1e3a8a)" } },
+              ...["Customer","Item","Collected By","Collection Date","Qty Collected"].map(h=>
+                React.createElement('th',{key:h,style:{padding:"10px 10px",textAlign:"left",fontWeight:700,color:"#fff",fontSize:10,textTransform:"uppercase",whiteSpace:"nowrap"}},h)
+              )
+            )),
+            React.createElement('tbody', null,
+              ...tableRows.map((row,idx)=>
+                React.createElement('tr',{key:idx,style:{borderTop:"1px solid #eef1f8",background:idx%2===0?"#fff":"#f8faff"}},
+                  React.createElement('td',{style:{padding:"9px 10px",fontWeight:800,color:"#2563eb",textTransform:"uppercase"}},row.customer),
+                  React.createElement('td',{style:{padding:"9px 10px"}},React.createElement('span',{style:{background:"#f0f4ff",color:"#1d4ed8",borderRadius:6,padding:"2px 8px",fontSize:11,fontWeight:700}},row.item)),
+                  React.createElement('td',{style:{padding:"9px 10px",color:"#374151",fontSize:11}},row.collectors||"—"),
+                  React.createElement('td',{style:{padding:"9px 10px",color:"#374151",fontSize:11,whiteSpace:"nowrap"}},fmtDate(row.collectTS)),
+                  React.createElement('td',{style:{padding:"9px 10px",textAlign:"center"}},React.createElement('span',{style:{background:"#dbeafe",color:"#1d4ed8",borderRadius:8,padding:"4px 10px",fontWeight:900,fontSize:13}},row.collected))
+                )
+              )
+            ),
+            React.createElement('tfoot', null, React.createElement('tr', { style:{ background:"linear-gradient(135deg,#1a2744,#1e3a8a)", borderTop:"3px solid #1a2744" } },
+              React.createElement('td',{colSpan:4,style:{padding:"11px 10px",fontWeight:900,color:"#fff",fontSize:13,textTransform:"uppercase"}},"Grand Total"),
+              React.createElement('td',{style:{padding:"11px 10px",textAlign:"center"}},React.createElement('span',{style:{background:"#60a5fa",color:"#fff",borderRadius:8,padding:"4px 12px",fontWeight:900,fontSize:14}},grandCollected))
+            ))
+          )
+        )
+    ),
+    chartData.length>0 && React.createElement(Card, { title:"📊 Incoming Load by "+groupBy.charAt(0).toUpperCase()+groupBy.slice(1),
+      titleRight: React.createElement('div', { style:{display:"flex",gap:6,flexWrap:"wrap"} },
+        ...["customer","collector","item","date"].map(k=>React.createElement('button',{key:k,onClick:()=>setGroupBy(k),style:{...smallBtn(groupBy===k?"#2563eb":"#e5e7eb"),color:groupBy===k?"#fff":"#374151",padding:"5px 10px",fontSize:11}},k.charAt(0).toUpperCase()+k.slice(1)))
+      )
+    },
+      React.createElement(ResponsiveContainer,{width:"100%",height:220},
+        React.createElement(BarChart,{data:chartData,margin:{top:5,right:10,left:-10,bottom:5}},
+          React.createElement(CartesianGrid,{strokeDasharray:"3 3",stroke:"#eef1f8"}),
+          React.createElement(XAxis,{dataKey:"name",tick:{fontSize:11,fill:"#6b7280"}}),
+          React.createElement(YAxis,{tick:{fontSize:11,fill:"#6b7280"}}),
+          React.createElement(Tooltip,{contentStyle:TOOLTIP_STYLE}),
+          React.createElement(Bar,{dataKey:"Collected",fill:"#2563eb",radius:[6,6,0,0],name:"Qty Collected"})
+        )
+      )
+    )
+  );
+}
+
+function PreVerificationDashboard({ records }) {
+  const pendingCount = records.filter(r=>r.verificationStatus==="pending").length;
+  return React.createElement(SummaryContent, { flatRows:buildFlatRows(records,["pending"]),
+    noticeEl: React.createElement('div',{style:{background:"#fef9c3",border:"2px solid #fde047",borderRadius:10,padding:"10px 16px",marginBottom:16}},
+      React.createElement('span',{style:{fontSize:13,color:"#854d0e",fontWeight:700}},`📥 ${pendingCount} incoming loads pending verification — collection records (unverified quantities)`)
+    )
+  });
+}
+
+// ─── Management Dashboard ───────────────────────────────────────────────────────
+function ManagementDashboard({ records }) {
+  const [fCustomer,setFCustomer]=useState(""); const [fCollector,setFCollector]=useState(""); const [fDateFrom,setFDateFrom]=useState(""); const [fDateTo,setFDateTo]=useState("");
+  const collectors=[...new Set(records.map(r=>r.collector))];
+  const filteredRecords=records.filter(r=>{
+    if(fCustomer&&r.customer!==fCustomer)return false; if(fCollector&&r.collector!==fCollector)return false;
+    if(fDateFrom&&new Date(r.timestamp)<new Date(fDateFrom))return false; if(fDateTo&&new Date(r.timestamp)>new Date(fDateTo+"T23:59:59"))return false; return true;
+  });
+  const approved=filteredRecords.filter(r=>r.verificationStatus==="approved");
+  const deviated=filteredRecords.filter(r=>r.verificationStatus==="deviated");
+  const pending=filteredRecords.filter(r=>r.verificationStatus==="pending");
+  const verifiedFlat=buildFlatRows(filteredRecords,["approved","deviated"]);
+  const colFlat=verifiedFlat.filter(r=>r.type==="collection"); const delFlat=verifiedFlat.filter(r=>r.type==="delivery");
+  const totalCollected=colFlat.reduce((a,r)=>a+r.qty,0); const totalDelivered=delFlat.reduce((a,r)=>a+r.qty,0); const netPending=Math.max(0,totalCollected-totalDelivered);
+  const verifiedTotal=approved.length+deviated.length;
+  const deviationRate=verifiedTotal>0?((deviated.length/verifiedTotal)*100).toFixed(1):"0.0";
+  const deliveryRate=totalCollected>0?((totalDelivered/totalCollected)*100).toFixed(1):"0.0";
+
+  const statusPie=[{name:"Approved",value:approved.length},{name:"Deviated",value:deviated.length},{name:"Pending",value:pending.length}].filter(d=>d.value>0);
+  const dailyMap={}; verifiedFlat.forEach(r=>{const day=new Date(r.timestamp).toLocaleDateString();if(!dailyMap[day])dailyMap[day]={date:day,Collected:0,Delivered:0};if(r.type==="collection")dailyMap[day].Collected+=r.qty;else dailyMap[day].Delivered+=r.qty;}); const dailyData=Object.values(dailyMap).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const customerMap={}; CUSTOMERS.forEach(c=>{customerMap[c]={name:c.toUpperCase(),Collected:0,Delivered:0,Pending:0};}); verifiedFlat.forEach(r=>{if(!customerMap[r.customer])customerMap[r.customer]={name:r.customer.toUpperCase(),Collected:0,Delivered:0,Pending:0};if(r.type==="collection")customerMap[r.customer].Collected+=r.qty;else customerMap[r.customer].Delivered+=r.qty;}); Object.values(customerMap).forEach(c=>{c.Pending=Math.max(0,c.Collected-c.Delivered);}); const customerData=Object.values(customerMap).filter(c=>c.Collected>0||c.Delivered>0);
+  const collectorMap={}; verifiedFlat.forEach(r=>{if(!collectorMap[r.collectorKey])collectorMap[r.collectorKey]={name:r.collector,Collected:0,Delivered:0};if(r.type==="collection")collectorMap[r.collectorKey].Collected+=r.qty;else collectorMap[r.collectorKey].Delivered+=r.qty;}); const collectorData=Object.values(collectorMap);
+  const itemMap={}; verifiedFlat.forEach(r=>{if(!itemMap[r.item])itemMap[r.item]={name:r.item,Collected:0,Delivered:0};if(r.type==="collection")itemMap[r.item].Collected+=r.qty;else itemMap[r.item].Delivered+=r.qty;}); const itemData=Object.values(itemMap);
+  const devMap={}; filteredRecords.filter(r=>r.verificationStatus!=="pending").forEach(r=>{if(!devMap[r.customer])devMap[r.customer]={name:r.customer.toUpperCase(),Approved:0,Deviated:0};if(r.verificationStatus==="approved")devMap[r.customer].Approved++;else devMap[r.customer].Deviated++;}); const deviationData=Object.values(devMap);
+  const radarData=ITEMS.map(item=>{const d={item};CUSTOMERS.forEach(c=>{d[c.toUpperCase()]=colFlat.filter(r=>r.customer===c&&r.item===item).reduce((a,r)=>a+r.qty,0);});return d;});
+
+  const h=260, sm=React.createElement;
+  return sm('div', null,
+    sm(Card,{title:"🔍 Filters"},
+      sm('div',{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}},
+        sm('div',null,sm('label',{style:{...labelStyle,fontSize:10}},"Customer"),sm('select',{value:fCustomer,onChange:e=>setFCustomer(e.target.value),style:sInput},sm('option',{value:""},"All"),...CUSTOMERS.map(c=>sm('option',{key:c},c)))),
+        sm('div',null,sm('label',{style:{...labelStyle,fontSize:10}},"Collector"),sm('select',{value:fCollector,onChange:e=>setFCollector(e.target.value),style:sInput},sm('option',{value:""},"All"),...collectors.map(c=>sm('option',{key:c},c)))),
+        sm('div',null,sm('label',{style:{...labelStyle,fontSize:10}},"From Date"),sm('input',{type:"date",value:fDateFrom,onChange:e=>setFDateFrom(e.target.value),style:sInput})),
+        sm('div',null,sm('label',{style:{...labelStyle,fontSize:10}},"To Date"),sm('input',{type:"date",value:fDateTo,onChange:e=>setFDateTo(e.target.value),style:sInput})),
+        sm('div',{style:{display:"flex",alignItems:"flex-end"}},sm('button',{onClick:()=>{setFCustomer("");setFCollector("");setFDateFrom("");setFDateTo("");},style:{...smallBtn("#6b7280"),width:"100%",padding:"11px 0"}},"Clear"))
+      )
+    ),
+    sm('div',{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(100px,1fr))",gap:12,marginBottom:18}},
+      ...[{icon:"📋",label:"Total",value:filteredRecords.length,color:"#2563eb"},{icon:"✅",label:"Approved",value:approved.length,color:"#16a34a"},{icon:"⚠",label:"Deviated",value:deviated.length,color:"#dc2626"},{icon:"⏳",label:"Pending",value:pending.length,color:"#f59e0b"},{icon:"📦",label:"Collected",value:totalCollected,color:"#2563eb"},{icon:"🚚",label:"Delivered",value:totalDelivered,color:"#16a34a"},{icon:"🔄",label:"Net Pending",value:netPending,color:"#f59e0b"},{icon:"📉",label:"Dev. Rate",value:`${deviationRate}%`,color:"#dc2626"},{icon:"📈",label:"Del. Rate",value:`${deliveryRate}%`,color:"#8b5cf6"}].map(k=>
+        sm('div',{key:k.label,style:{background:"#fff",borderRadius:14,padding:"14px 10px",boxShadow:"0 2px 12px rgba(26,39,68,0.08)",borderTop:`4px solid ${k.color}`,textAlign:"center"}},
+          sm('div',{style:{fontSize:20}},k.icon),
+          sm('div',{style:{fontSize:18,fontWeight:900,color:"#1a2744",marginTop:4}},k.value),
+          sm('div',{style:{fontSize:9,color:"#6b7280",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.05em",marginTop:2}},k.label)
+        )
+      )
+    ),
+    sm('div',{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}},
+      sm(Card,{title:"🥧 Status"},statusPie.length===0?sm('div',{style:{textAlign:"center",padding:30,color:"#aab4c8"}},"No data yet"):sm(ResponsiveContainer,{width:"100%",height:h},sm(PieChart,null,sm(Pie,{data:statusPie,cx:"50%",cy:"50%",innerRadius:55,outerRadius:85,dataKey:"value",label:({percent})=>`${(percent*100).toFixed(0)}%`,labelLine:false},...statusPie.map((_,i)=>sm(Cell,{key:i,fill:["#16a34a","#dc2626","#f59e0b"][i]}))),sm(Tooltip,{contentStyle:TOOLTIP_STYLE}),sm(Legend,{wrapperStyle:{fontSize:11}})))),
+      sm(Card,{title:"📈 Daily Trend"},dailyData.length===0?sm('div',{style:{textAlign:"center",padding:30,color:"#aab4c8"}},"No verified data"):sm(ResponsiveContainer,{width:"100%",height:h},sm(AreaChart,{data:dailyData,margin:{top:5,right:5,left:-20,bottom:5}},sm('defs',null,sm('linearGradient',{id:"gc",x1:"0",y1:"0",x2:"0",y2:"1"},sm('stop',{offset:"5%",stopColor:"#2563eb",stopOpacity:0.25}),sm('stop',{offset:"95%",stopColor:"#2563eb",stopOpacity:0})),sm('linearGradient',{id:"gd",x1:"0",y1:"0",x2:"0",y2:"1"},sm('stop',{offset:"5%",stopColor:"#16a34a",stopOpacity:0.25}),sm('stop',{offset:"95%",stopColor:"#16a34a",stopOpacity:0}))),sm(CartesianGrid,{strokeDasharray:"3 3",stroke:"#eef1f8"}),sm(XAxis,{dataKey:"date",tick:{fontSize:10,fill:"#6b7280"}}),sm(YAxis,{tick:{fontSize:10,fill:"#6b7280"}}),sm(Tooltip,{contentStyle:TOOLTIP_STYLE}),sm(Legend,{wrapperStyle:{fontSize:11}}),sm(Area,{type:"monotone",dataKey:"Collected",stroke:"#2563eb",strokeWidth:2,fill:"url(#gc)"}),sm(Area,{type:"monotone",dataKey:"Delivered",stroke:"#16a34a",strokeWidth:2,fill:"url(#gd)"}))))
+    ),
+    sm(Card,{title:"🏪 Customer Performance"},customerData.length===0?sm('div',{style:{textAlign:"center",padding:30,color:"#aab4c8"}},"No verified data"):sm(ResponsiveContainer,{width:"100%",height:h},sm(BarChart,{data:customerData,margin:{top:5,right:5,left:-20,bottom:5}},sm(CartesianGrid,{strokeDasharray:"3 3",stroke:"#eef1f8"}),sm(XAxis,{dataKey:"name",tick:{fontSize:11,fill:"#6b7280"}}),sm(YAxis,{tick:{fontSize:11,fill:"#6b7280"}}),sm(Tooltip,{contentStyle:TOOLTIP_STYLE}),sm(Legend,{wrapperStyle:{fontSize:11}}),sm(Bar,{dataKey:"Collected",fill:"#2563eb",radius:[4,4,0,0]}),sm(Bar,{dataKey:"Delivered",fill:"#16a34a",radius:[4,4,0,0]}),sm(Bar,{dataKey:"Pending",fill:"#f59e0b",radius:[4,4,0,0]})))),
+    sm('div',{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}},
+      sm(Card,{title:"👤 Collector Perf"},collectorData.length===0?sm('div',{style:{textAlign:"center",padding:30,color:"#aab4c8"}},"No data"):sm(ResponsiveContainer,{width:"100%",height:h},sm(BarChart,{data:collectorData,layout:"vertical",margin:{top:5,right:5,left:50,bottom:5}},sm(CartesianGrid,{strokeDasharray:"3 3",stroke:"#eef1f8"}),sm(XAxis,{type:"number",tick:{fontSize:10,fill:"#6b7280"}}),sm(YAxis,{type:"category",dataKey:"name",tick:{fontSize:11,fill:"#6b7280"},width:70}),sm(Tooltip,{contentStyle:TOOLTIP_STYLE}),sm(Legend,{wrapperStyle:{fontSize:11}}),sm(Bar,{dataKey:"Collected",fill:"#2563eb",radius:[0,4,4,0]}),sm(Bar,{dataKey:"Delivered",fill:"#16a34a",radius:[0,4,4,0]})))),
+      sm(Card,{title:"🧺 Item-wise"},itemData.length===0?sm('div',{style:{textAlign:"center",padding:30,color:"#aab4c8"}},"No data"):sm(ResponsiveContainer,{width:"100%",height:h},sm(BarChart,{data:itemData,margin:{top:5,right:5,left:-20,bottom:5}},sm(CartesianGrid,{strokeDasharray:"3 3",stroke:"#eef1f8"}),sm(XAxis,{dataKey:"name",tick:{fontSize:11,fill:"#6b7280"}}),sm(YAxis,{tick:{fontSize:11,fill:"#6b7280"}}),sm(Tooltip,{contentStyle:TOOLTIP_STYLE}),sm(Legend,{wrapperStyle:{fontSize:11}}),sm(Bar,{dataKey:"Collected",fill:"#8b5cf6",radius:[6,6,0,0]}),sm(Bar,{dataKey:"Delivered",fill:"#06b6d4",radius:[6,6,0,0]}))))
+    ),
+    sm('div',{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:18}},
+      sm(Card,{title:"⚠ Deviation by Customer"},deviationData.length===0?sm('div',{style:{textAlign:"center",padding:30,color:"#aab4c8"}},"No verified records"):sm(ResponsiveContainer,{width:"100%",height:h},sm(BarChart,{data:deviationData,margin:{top:5,right:5,left:-20,bottom:5}},sm(CartesianGrid,{strokeDasharray:"3 3",stroke:"#eef1f8"}),sm(XAxis,{dataKey:"name",tick:{fontSize:11,fill:"#6b7280"}}),sm(YAxis,{tick:{fontSize:11,fill:"#6b7280"}}),sm(Tooltip,{contentStyle:TOOLTIP_STYLE}),sm(Legend,{wrapperStyle:{fontSize:11}}),sm(Bar,{dataKey:"Approved",fill:"#16a34a",stackId:"a"}),sm(Bar,{dataKey:"Deviated",fill:"#dc2626",stackId:"a",radius:[6,6,0,0]})))),
+      sm(Card,{title:"🕸 Customer×Item Radar"},verifiedFlat.length===0?sm('div',{style:{textAlign:"center",padding:30,color:"#aab4c8"}},"No data"):sm(ResponsiveContainer,{width:"100%",height:h},sm(RadarChart,{data:radarData},sm(PolarGrid,{stroke:"#eef1f8"}),sm(PolarAngleAxis,{dataKey:"item",tick:{fontSize:11,fill:"#6b7280"}}),sm(PolarRadiusAxis,{tick:{fontSize:9,fill:"#9ca3af"}}),...CUSTOMERS.map((c,i)=>sm(Radar,{key:c,name:c.toUpperCase(),dataKey:c.toUpperCase(),stroke:CHART_COLORS[i],fill:CHART_COLORS[i],fillOpacity:0.15})),sm(Legend,{wrapperStyle:{fontSize:11}}),sm(Tooltip,{contentStyle:TOOLTIP_STYLE}))))
+    ),
+    sm(Card,{title:"📋 Transaction Table"},
+      filteredRecords.length===0?sm('div',{style:{textAlign:"center",padding:40,color:"#aab4c8"}},"No records."):
+      sm('div',{style:{overflowX:"auto",WebkitOverflowScrolling:"touch"}},
+        sm('table',{style:{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:550}},
+          sm('thead',null,sm('tr',{style:{background:"linear-gradient(135deg,#1a2744,#1e3a8a)"}},
+            ...["Customer","Collector","Type","Items","Rec. Qty","Ver. Qty","Status","Date"].map(h=>sm('th',{key:h,style:{padding:"9px 10px",textAlign:"left",fontWeight:700,color:"#fff",fontSize:10,textTransform:"uppercase",whiteSpace:"nowrap"}},h))
+          )),
+          sm('tbody',null,...filteredRecords.slice().sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp)).map((r,idx)=>{
+            const recQty=r.items.reduce((a,i)=>a+i.qty,0), verQty=r.verifiedItems?r.verifiedItems.reduce((a,i)=>a+i.qty,0):"—";
+            return sm('tr',{key:r.id,style:{borderTop:"1px solid #eef1f8",background:idx%2===0?"#fff":"#f8faff"}},
+              sm('td',{style:{padding:"8px 10px",fontWeight:800,color:"#2563eb",textTransform:"uppercase"}},r.customer),
+              sm('td',{style:{padding:"8px 10px",color:"#374151"}},r.collectorName),
+              sm('td',{style:{padding:"8px 10px"}},sm(TypeBadge,{type:r.type})),
+              sm('td',{style:{padding:"8px 10px",color:"#374151",fontSize:11}},r.items.map(i=>`${i.name}(${i.qty})`).join(", ")),
+              sm('td',{style:{padding:"8px 10px",textAlign:"center",fontWeight:700}},recQty),
+              sm('td',{style:{padding:"8px 10px",textAlign:"center",fontWeight:700,color:verQty!=="—"&&verQty!==recQty?"#dc2626":"#374151"}},verQty),
+              sm('td',{style:{padding:"8px 10px"}},sm(StatusBadge,{status:r.verificationStatus})),
+              sm('td',{style:{padding:"8px 10px",color:"#6b7280",fontSize:11,whiteSpace:"nowrap"}},new Date(r.timestamp).toLocaleDateString())
+            );
+          }))
+        )
+      )
+    )
+  );
+}
+
+// ─── Factory Dashboard ─────────────────────────────────────────────────────────
+function FactoryDashboard({ records, setRecords, user }) {
+  const [filterCustomer,setFilterCustomer]=useState(""); const [filterType,setFilterType]=useState(""); const [filterCollector,setFilterCollector]=useState(""); const [dateFrom,setDateFrom]=useState(""); const [dateTo,setDateTo]=useState(""); const [activeTab,setActiveTab]=useState("pending");
+  const collectors=[...new Set(records.map(r=>r.collector))];
+  const filtered=records.filter(r=>{
+    if(activeTab!=="all"&&r.verificationStatus!==activeTab)return false; if(filterCustomer&&r.customer!==filterCustomer)return false; if(filterType&&r.type!==filterType)return false; if(filterCollector&&r.collector!==filterCollector)return false; if(dateFrom&&new Date(r.timestamp)<new Date(dateFrom))return false; if(dateTo&&new Date(r.timestamp)>new Date(dateTo+"T23:59:59"))return false; return true;
+  });
+  const handleVerify=(id,{verifiedItems,remark,status})=>{
+    setRecords(prev=>{const next=prev.map(r=>r.id!==id?r:{...r,verificationStatus:status,verifiedItems,remark,verifiedBy:user.username,verifiedAt:new Date().toISOString()}); saveRecords(next); return next;});
+  };
+  const tabs=[
+    {key:"pending",label:"⏳ Pending",count:records.filter(r=>r.verificationStatus==="pending").length},
+    {key:"approved",label:"✅ Approved",count:records.filter(r=>r.verificationStatus==="approved").length},
+    {key:"deviated",label:"⚠ Deviated",count:records.filter(r=>r.verificationStatus==="deviated").length},
+    {key:"all",label:"📋 All",count:records.length}
+  ];
+  const sm=React.createElement;
+  const totalCollected=records.filter(r=>r.type==="collection").reduce((s,r)=>s+r.items.reduce((a,i)=>a+i.qty,0),0);
+  const totalDelivered=records.filter(r=>r.type==="delivery").reduce((s,r)=>s+r.items.reduce((a,i)=>a+i.qty,0),0);
+  return sm('div',null,
+    sm('div',{style:{display:"flex",gap:10,marginBottom:18,flexWrap:"wrap"}},
+      sm(StatBadge,{label:"Total Collected",value:totalCollected,color:"#2563eb"}),
+      sm(StatBadge,{label:"Total Delivered",value:totalDelivered,color:"#27ae60"}),
+      sm(StatBadge,{label:"Pending",value:records.filter(r=>r.verificationStatus==="pending").length,color:"#f59e0b"}),
+      sm(StatBadge,{label:"Deviations",value:records.filter(r=>r.verificationStatus==="deviated").length,color:"#e74c3c"})
+    ),
+    sm(Card,{title:"🔍 Filters"},
+      sm('div',{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10}},
+        sm('div',null,sm('label',{style:{...labelStyle,fontSize:10}},"Customer"),sm('select',{value:filterCustomer,onChange:e=>setFilterCustomer(e.target.value),style:sInput},sm('option',{value:""},"All"),...CUSTOMERS.map(c=>sm('option',{key:c},c)))),
+        sm('div',null,sm('label',{style:{...labelStyle,fontSize:10}},"Type"),sm('select',{value:filterType,onChange:e=>setFilterType(e.target.value),style:sInput},sm('option',{value:""},"All"),sm('option',{value:"collection"},"Collection"),sm('option',{value:"delivery"},"Delivery"))),
+        sm('div',null,sm('label',{style:{...labelStyle,fontSize:10}},"Collector"),sm('select',{value:filterCollector,onChange:e=>setFilterCollector(e.target.value),style:sInput},sm('option',{value:""},"All"),...collectors.map(c=>sm('option',{key:c},c)))),
+        sm('div',null,sm('label',{style:{...labelStyle,fontSize:10}},"From Date"),sm('input',{type:"date",value:dateFrom,onChange:e=>setDateFrom(e.target.value),style:sInput})),
+        sm('div',null,sm('label',{style:{...labelStyle,fontSize:10}},"To Date"),sm('input',{type:"date",value:dateTo,onChange:e=>setDateTo(e.target.value),style:sInput})),
+        sm('div',{style:{display:"flex",alignItems:"flex-end"}},sm('button',{onClick:()=>{setFilterCustomer("");setFilterType("");setFilterCollector("");setDateFrom("");setDateTo("");},style:{...smallBtn("#6b7280"),width:"100%",padding:"11px 0"}},"Clear"))
+      )
+    ),
+    sm('div',{style:{display:"flex",gap:0,marginBottom:16,background:"#fff",borderRadius:12,overflow:"hidden",boxShadow:"0 2px 10px rgba(26,39,68,0.07)",border:"1.5px solid #eef1f8"}},
+      ...tabs.map(t=>sm('button',{key:t.key,onClick:()=>setActiveTab(t.key),style:{flex:1,padding:"12px 6px",border:"none",cursor:"pointer",fontFamily:"inherit",fontWeight:activeTab===t.key?800:600,fontSize:11,background:activeTab===t.key?"linear-gradient(135deg,#1a2744,#2563eb)":"transparent",color:activeTab===t.key?"#fff":"#6b7280",transition:"all 0.2s",minHeight:48}},
+        t.label," ",sm('span',{style:{marginLeft:2,background:activeTab===t.key?"rgba(255,255,255,0.25)":"#eef1f8",color:activeTab===t.key?"#fff":"#374151",borderRadius:10,padding:"1px 6px",fontSize:10,fontWeight:900}},t.count)
+      ))
+    ),
+    filtered.length===0
+      ? sm(Card,null,sm('div',{style:{textAlign:"center",padding:40,color:"#aab4c8"}},"No records in this category."))
+      : filtered.map(r=>sm(RecordCard,{key:r.id,record:r,isFactory:true,onVerify:handleVerify}))
+  );
+}
+
+// ─── Login Screen ──────────────────────────────────────────────────────────────
+function LoginScreen({ onLogin }) {
+  const [username,setUsername]=useState(""); const [password,setPassword]=useState(""); const [error,setError]=useState("");
+  const handleLogin=()=>{ const user=USERS.find(u=>u.username===username&&u.password===password); if(user)onLogin(user); else setError("Invalid username or password."); };
+  const sm=React.createElement;
+  return sm('div',{style:{minHeight:"100vh",background:"linear-gradient(135deg,#0f172a 0%,#1a2744 55%,#1e3a8a 100%)",display:"flex",alignItems:"center",justifyContent:"center",padding:"20px",paddingTop:"calc(20px + env(safe-area-inset-top))",paddingBottom:"calc(20px + env(safe-area-inset-bottom))"}},
+    sm('div',{style:{position:"absolute",inset:0,overflow:"hidden",pointerEvents:"none"}},
+      ...[...Array(5)].map((_,i)=>sm('div',{key:i,style:{position:"absolute",borderRadius:"50%",background:`rgba(37,99,235,${0.04+i*0.02})`,width:(180+i*80)+"px",height:(180+i*80)+"px",top:(8+i*14)+"%",left:(4+i*16)+"%",animation:`float ${6+i}s ease-in-out infinite alternate`}}))
+    ),
+    sm('div',{style:{background:"rgba(255,255,255,0.97)",borderRadius:24,padding:"40px 28px",width:"100%",maxWidth:400,boxShadow:"0 32px 80px rgba(0,0,0,0.4)",position:"relative",zIndex:1,animation:"fadeUp 0.5s ease"}},
+      sm('div',{style:{textAlign:"center",marginBottom:32}},
+        sm('div',{style:{fontSize:52,marginBottom:8}},"🧺"),
+        sm('div',{style:{fontSize:26,fontWeight:900,color:"#1a2744",letterSpacing:"-0.02em"}},"LaundryTrack"),
+        sm('div',{style:{fontSize:13,color:"#6b7280",marginTop:4}},"Collection & Delivery Management")
+      ),
+      sm('div',{style:{marginBottom:16}},
+        sm('label',{style:labelStyle},"Username"),
+        sm('input',{type:"text",value:username,onChange:e=>setUsername(e.target.value),placeholder:"Enter username",style:inputStyle,autoCapitalize:"none",autoCorrect:"off",onKeyDown:e=>e.key==="Enter"&&handleLogin()})
+      ),
+      sm('div',{style:{marginBottom:22}},
+        sm('label',{style:labelStyle},"Password"),
+        sm('input',{type:"password",value:password,onChange:e=>setPassword(e.target.value),placeholder:"Enter password",style:inputStyle,onKeyDown:e=>e.key==="Enter"&&handleLogin()})
+      ),
+      error&&sm('div',{style:{color:"#e74c3c",fontSize:13,marginBottom:14,fontWeight:600,textAlign:"center"}},`⚠ ${error}`),
+      sm('button',{onClick:handleLogin,style:{width:"100%",padding:"16px 0",background:"linear-gradient(135deg,#1a2744,#2563eb)",color:"#fff",border:"none",borderRadius:12,fontSize:17,fontWeight:800,cursor:"pointer",fontFamily:"inherit",minHeight:54}},"Sign In"),
+      sm('div',{style:{marginTop:24,background:"#f0f4ff",borderRadius:12,padding:"14px 16px",fontSize:12,color:"#4b5563",lineHeight:2}},
+        sm('div',{style:{fontWeight:700,marginBottom:2,color:"#1a2744"}},"Demo Credentials"),
+        sm('div',null,"Collector 1: ",sm('code',null,"collector1")," / ",sm('code',null,"collect123")),
+        sm('div',null,"Collector 2: ",sm('code',null,"collector2")," / ",sm('code',null,"collect456")),
+        sm('div',null,"Factory: ",sm('code',null,"factory")," / ",sm('code',null,"factory123"))
+      )
+    )
+  );
+}
+
+// ─── Root App ──────────────────────────────────────────────────────────────────
+function App() {
+  const [user, setUser] = useState(null);
+  const [records, setRecords] = useState(() => loadRecords());
+  const [activeTab, setActiveTab] = useState("form");
+
+  if (!user) return React.createElement(LoginScreen, { onLogin:(u)=>{ setUser(u); setActiveTab(u.role==="receiver"?"verify":"form"); } });
+
+  const factoryTabs = [["management","📊","Management"],["summary","📈","Summary"],["preverify","📥","Incoming Load"],["verify","🏭","Verify"]];
+  const collectorTabs = [["form","📝","New Record"],["history","📋","My Records"]];
+  const tabs = user.role==="collector" ? collectorTabs : factoryTabs;
+
+  const sm = React.createElement;
+  const pageHeaderTitles = {
+    form: "New Record", history: "My Records",
+    management: "Management Dashboard", summary: "Verified Summary", preverify: "Incoming Load", verify: "Factory Verification"
+  };
+
+  return sm('div', { style:{ fontFamily:"'Sora',sans-serif", minHeight:"100vh", background:"#eef2fa" } },
+    // Desktop/tablet sticky header
+    sm('div', { className:"desktop-nav", style:{ background:"linear-gradient(135deg,#0f172a,#1e3a8a)", padding:"0 24px", position:"sticky", top:0, zIndex:100, boxShadow:"0 4px 20px rgba(10,30,80,0.4)", paddingTop:"env(safe-area-inset-top)" } },
+      sm('div', { style:{ maxWidth:1200, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", height:62, gap:10 } },
+        sm('div', { style:{ display:"flex", alignItems:"center", gap:10 } },
+          sm('span', { style:{fontSize:22} }, "🧺"),
+          sm('span', { style:{fontSize:17,fontWeight:900,color:"#fff"} }, "LaundryTrack"),
+          user.role==="receiver" && sm('span', { style:{background:"#f59e0b",color:"#451a03",borderRadius:5,padding:"2px 9px",fontSize:10,fontWeight:900,textTransform:"uppercase"} }, "Factory")
+        ),
+        sm('div', { style:{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"} },
+          sm('div', { style:{display:"flex",background:"rgba(255,255,255,0.1)",borderRadius:8,overflow:"hidden"} },
+            ...tabs.map(([key,icon,label])=>sm('button',{key,onClick:()=>setActiveTab(key),style:{background:activeTab===key?"rgba(255,255,255,0.22)":"transparent",color:"#fff",border:"none",padding:"9px 14px",cursor:"pointer",fontFamily:"inherit",fontWeight:700,fontSize:12,borderRight:"1px solid rgba(255,255,255,0.1)"}},`${icon} ${label}`))
+          ),
+          sm('span', { style:{fontSize:13,color:"rgba(255,255,255,0.8)"} }, "👤 ", sm('span',{style:{color:"#fff",fontWeight:700}},user.displayName)),
+          sm('button', { onClick:()=>setUser(null), style:{...smallBtn("rgba(255,255,255,0.12)"),border:"1px solid rgba(255,255,255,0.22)",padding:"7px 14px"} }, "Sign Out")
+        )
+      )
+    ),
+    // Mobile header bar
+    sm('div', { style:{ background:"linear-gradient(135deg,#0f172a,#1e3a8a)", padding:"0 16px", display:"flex", alignItems:"center", justifyContent:"space-between", height:"calc(52px + env(safe-area-inset-top))", paddingTop:"env(safe-area-inset-top)", position:"sticky", top:0, zIndex:100, boxShadow:"0 4px 20px rgba(10,30,80,0.4)" }, className:"" },
+      sm('div', { style:{display:"flex",alignItems:"center",gap:8} },
+        sm('span', { style:{fontSize:20} }, "🧺"),
+        sm('span', { style:{fontSize:15,fontWeight:900,color:"#fff"} }, "LaundryTrack"),
+        user.role==="receiver" && sm('span', { style:{background:"#f59e0b",color:"#451a03",borderRadius:4,padding:"2px 7px",fontSize:9,fontWeight:900,textTransform:"uppercase"} }, "Factory")
+      ),
+      sm('div', { style:{display:"flex",alignItems:"center",gap:8} },
+        sm('span', { style:{fontSize:12,color:"rgba(255,255,255,0.8)",fontWeight:600} }, user.displayName),
+        sm('button', { onClick:()=>setUser(null), style:{...smallBtn("rgba(255,255,255,0.15)"),border:"1px solid rgba(255,255,255,0.2)",padding:"6px 12px",fontSize:12} }, "Out")
+      )
+    ),
+    // Page content
+    sm('div', { className:"page-content scroll-container", style:{ maxWidth:1200, margin:"0 auto", padding:"20px 14px" } },
+      sm('div', { style:{ fontSize:20, fontWeight:900, color:"#1a2744", marginBottom:16 } }, pageHeaderTitles[activeTab]||""),
+      user.role==="collector" ? (
+        activeTab==="form"
+          ? sm(CollectorForm, { user, setRecords, records })
+          : sm(CollectorHistory, { records:records.filter(r=>r.collector===user.username) })
+      ) : sm('div', null,
+        activeTab==="management" && sm(ManagementDashboard, { records }),
+        activeTab==="summary" && sm(SummaryDashboard, { records }),
+        activeTab==="preverify" && sm(PreVerificationDashboard, { records }),
+        activeTab==="verify" && sm(FactoryDashboard, { records, setRecords, user })
+      )
+    ),
+    // Mobile bottom nav
+    sm('nav', { className:"mobile-bottom-nav" },
+      ...tabs.map(([key,icon,label])=>sm('button',{key,onClick:()=>setActiveTab(key),className:activeTab===key?"active":""},
+        sm('span',{className:"nav-icon"},icon),
+        sm('span',null,label)
+      ))
+    )
+  );
+}
+
+// Mount React
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(App));
+
+// Hide splash after app loads
+setTimeout(() => {
+  document.getElementById('splash').classList.add('hide');
+  setTimeout(() => document.getElementById('splash').remove(), 600);
+}, 1800);
+</script>
+</body>
+</html>
